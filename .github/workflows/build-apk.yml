@@ -14,25 +14,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Unpack PulseForge project
-        run: |
-          ZIP=$(find . -maxdepth 1 -type f -name "*.zip" | head -1)
-          test -n "$ZIP"
-          mkdir -p extracted
-          unzip -o "$ZIP" -d extracted
-
-      - name: Find Android project
-        id: project
-        run: |
-          GRADLE=$(find extracted -type f -name "gradlew" | head -1)
-          if [ -n "$GRADLE" ]; then
-            DIR=$(dirname "$GRADLE")
-          else
-            DIR=$(find extracted -type f -name "settings.gradle" -printf '%h\n' | head -1)
-          fi
-          test -n "$DIR"
-          echo "dir=$DIR" >> "$GITHUB_OUTPUT"
-
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -41,7 +22,37 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
 
-      - name: Build APK
-        working-directory: ./extracted/PulseForge-X-Mobile
-        
+      - name: Extract project
+        run: |
+          mkdir -p extracted
+          ZIP=$(find . -maxdepth 1 -type f -name "*.zip" | head -n 1)
+          test -n "$ZIP"
+          unzip -o "$ZIP" -d extracted
+
+      - name: Build Android APK
+        run: |
+          PROJECT=$(find extracted -type f -name "settings.gradle" -printf '%h\n' | head -n 1)
+          test -n "$PROJECT"
+          cd "$PROJECT"
+          if [ -f gradlew ]; then
+            chmod +x gradlew
+            ./gradlew assembleDebug
+          else
+            gradle assembleDebug
+          fi
+
+      - name: Collect APK
+        run: |
+          mkdir -p apk-output
+          APK=$(find extracted -type f -name "*.apk" | head -n 1)
+          test -n "$APK"
+          cp "$APK" apk-output/PulseForge-X.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PulseForge-X-APK
+          path: apk-output/PulseForge-X.apk
