@@ -1,0 +1,46 @@
+name: Build PulseForge APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Unpack PulseForge project
+        run: |
+          ZIP=$(find . -maxdepth 1 -type f -name "*.zip" | head -1)
+          test -n "$ZIP"
+          mkdir -p extracted
+          unzip -o "$ZIP" -d extracted
+
+      - name: Find Android project
+        id: project
+        run: |
+          GRADLE=$(find extracted -type f -name "gradlew" | head -1)
+          if [ -n "$GRADLE" ]; then
+            DIR=$(dirname "$GRADLE")
+          else
+            DIR=$(find extracted -type f -name "settings.gradle" -printf '%h\n' | head -1)
+          fi
+          test -n "$DIR"
+          echo "dir=$DIR" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build APK
+        working-directory: ${{ steps.project.outputs
