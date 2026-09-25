@@ -2,9 +2,6 @@ name: Build PulseForge APK
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
 
 jobs:
   build:
@@ -30,19 +27,51 @@ jobs:
           mkdir -p extracted
           unzip -o PulseForge-X-Mobile-V54-NotificationFix.zip -d extracted
 
-      - name: Build Android APK
+      - name: Download signing key
+        uses: actions/download-artifact@v4
+        with:
+          name: pulseforge-signing-key
+          path: signing-key
+
+      - name: Build APK
         working-directory: extracted/PulseForge-X-Mobile
+        env:
+          STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
           echo "android.useAndroidX=true" > gradle.properties
           gradle assembleDebug
 
-      - name: Collect APK
+      - name: Sign APK
+        env:
+          STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
-          mkdir -p apk-output
-          cp extracted/PulseForge-X-Mobile/app/build/outputs/apk/debug/app-debug.apk apk-output/PulseForge-X.apk
+          UNSIGNED_APK=$(find extracted -type f -name "*.apk" | head -n 1)
+          test -n "$UNSIGNED_APK"
 
-      - name: Upload
+          BUILD_TOOLS=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
+          test -n "$BUILD_TOOLS"
+
+          mkdir -p apk-output
+
+          "$BUILD_TOOLS/zipalign" -f -p 4 \
+            "$UNSIGNED_APK" \
+            apk-output/PulseForge-X-aligned.apk
+
+          "$BUILD_TOOLS/apksigner" sign \
+            --ks signing-key/pulseforge-release.jks \
+            --ks-key-alias pulseforge \
+            --ks-pass env:STORE_PASSWORD \
+            --key-pass env:KEY_PASSWORD \
+            --out apk-output/PulseForge-X.apk \
+            apk-output/PulseForge-X-aligned.apk
+
+          "$BUILD_TOOLS/apksigner" verify --verbose \
+            apk-output/PulseForge-X.apk
+
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: PulseForge-X-APK
+          name: PulseForge-X-Signed-APK
           path: apk-output/PulseForge-X.apk
