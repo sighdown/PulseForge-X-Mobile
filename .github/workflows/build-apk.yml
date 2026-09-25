@@ -34,6 +34,7 @@ jobs:
 
       - name: Build Android APK
         run: |
+         echo "android.useAndroidX=true" > extracted/PulseForge-X-Mobile/gradle.properties
           PROJECT=$(find extracted -type f -name "settings.gradle" -printf '%h\n' | head -n 1)
           test -n "$PROJECT"
           cd "$PROJECT"
