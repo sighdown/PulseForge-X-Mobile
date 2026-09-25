@@ -28,7 +28,7 @@ jobs:
       - name: Extract project
         run: |
           mkdir -p extracted
-          unzip -o PulseForge-X-Mobile-V54-MVP.zip -d extracted
+          unzip -o PulseForge-X-Mobile-V54-NotificationFix.zip -d extracted
 
       - name: Build Android APK
         working-directory: extracted/PulseForge-X-Mobile
