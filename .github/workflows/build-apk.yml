@@ -27,11 +27,11 @@ jobs:
           mkdir -p extracted
           unzip -o PulseForge-X-Mobile-V54-NotificationFix.zip -d extracted
 
-      - name: Download signing key
-        uses: actions/download-artifact@v4
-        with:
-          name: pulseforge-signing-key
-          path: signing-key
+      - name: Restore signing key
+        run: |
+          mkdir -p signing-key
+          echo "${{ secrets.SIGNING_KEY_BASE64 }}" | base64 --decode > signing-key/pulseforge-release.jks
+
 
       - name: Build APK
         working-directory: extracted/PulseForge-X-Mobile
