@@ -25,12 +25,8 @@ jobs:
       - name: Extract project
         run: |
           mkdir -p extracted
-          unzip -o PulseForge-X-Mobile-PCStyle-V79-DualHistory.zip -d extracted
+          unzip -o PulseForge-X-Mobile-PCStyle-V80-UXFeedback.zip -d extracted
 
-      - name: Fix V7.9 duplicate methods
-        run: |
-          sed -i '93,95d' extracted/PulseForge-X-Mobile/app/src/main/java/com/pulseforge/xmobile/AlertHistoryActivity.java
-          
       - name: Restore signing key
         run: |
           mkdir -p signing-key
