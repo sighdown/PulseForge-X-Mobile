@@ -44,6 +44,7 @@ jobs:
         run: |
           sed -i 's/compileSdk = 37/compileSdk = 36/' app/build.gradle.kts
           sed -i 's/targetSdk = 37/targetSdk = 36/' app/build.gradle.kts
+          sed -i '/kotlin("android")/d' build.gradle.kts app/build.gradle.kts
           gradle :app:assembleRelease
 
       - name: Restore signing key
