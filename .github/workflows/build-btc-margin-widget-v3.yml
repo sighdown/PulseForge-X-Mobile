@@ -1,4 +1,4 @@
-name: Build BTC Margin Widget v4 1x1 APK
+name: Build BTC Margin Widget v5 1x1 APK
 
 on:
   push:
@@ -44,14 +44,17 @@ jobs:
         run: |
           sed -i 's/compileSdk = 37/compileSdk = 36/' app/build.gradle.kts
           sed -i 's/targetSdk = 37/targetSdk = 36/' app/build.gradle.kts
-          sed -i 's/versionCode = 3/versionCode = 4/' app/build.gradle.kts
-          sed -i 's/versionName = "3.0"/versionName = "4.0"/' app/build.gradle.kts
+          sed -i 's/versionCode = 3/versionCode = 5/' app/build.gradle.kts
+          sed -i 's/versionName = "3.0"/versionName = "5.0"/' app/build.gradle.kts
           sed -i '/kotlin("android")/d' build.gradle.kts app/build.gradle.kts
           sed -i 's/android:minWidth="110dp"/android:minWidth="40dp"/' app/src/main/res/xml/margin_widget_info.xml
           sed -i 's/android:minResizeWidth="110dp"/android:minResizeWidth="40dp"/' app/src/main/res/xml/margin_widget_info.xml
           sed -i 's/android:targetCellWidth="2"/android:targetCellWidth="1"/' app/src/main/res/xml/margin_widget_info.xml
           sed -i 's/android:paddingHorizontal="4dp"/android:paddingHorizontal="2dp"/' app/src/main/res/layout/widget_margin.xml
           sed -i 's/android:textSize="24sp"/android:textSize="20sp"/g' app/src/main/res/layout/widget_margin.xml
+          cp "$GITHUB_WORKSPACE/tmp-btc-margin-widget-v3/RealtimeUpdateService.kt" app/src/main/java/com/lactoone/marginwidget/RealtimeUpdateService.kt
+          sed -i 's/화면 켜짐: BTC 실시간 · Margin Balance 2초 · 화면 꺼짐: 5분/화면 켜짐: BTC · Margin Balance 모두 1초 · 화면 꺼짐: 5분/' app/src/main/java/com/lactoone/marginwidget/SettingsActivity.kt
+          sed -i 's/홈 화면 2×1/홈 화면 1×1/g' app/src/main/java/com/lactoone/marginwidget/SettingsActivity.kt
           gradle :app:assembleRelease
 
       - name: Restore signing key
@@ -69,18 +72,18 @@ jobs:
           BUILD_TOOLS=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
           test -n "$BUILD_TOOLS"
           mkdir -p apk-output
-          "$BUILD_TOOLS/zipalign" -f -p 4 "$UNSIGNED_APK" apk-output/BTC-Margin-Widget-v4-1x1-aligned.apk
+          "$BUILD_TOOLS/zipalign" -f -p 4 "$UNSIGNED_APK" apk-output/BTC-Margin-Widget-v5-1x1-aligned.apk
           "$BUILD_TOOLS/apksigner" sign \
             --ks signing-key/pulseforge-release.jks \
             --ks-key-alias pulseforge \
             --ks-pass env:STORE_PASSWORD \
             --key-pass env:KEY_PASSWORD \
-            --out apk-output/BTC-Margin-Widget-v4-1x1.apk \
-            apk-output/BTC-Margin-Widget-v4-1x1-aligned.apk
-          "$BUILD_TOOLS/apksigner" verify --verbose apk-output/BTC-Margin-Widget-v4-1x1.apk
+            --out apk-output/BTC-Margin-Widget-v5-1x1.apk \
+            apk-output/BTC-Margin-Widget-v5-1x1-aligned.apk
+          "$BUILD_TOOLS/apksigner" verify --verbose apk-output/BTC-Margin-Widget-v5-1x1.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: BTC-Margin-Widget-v4-1x1-Signed-APK
-          path: apk-output/BTC-Margin-Widget-v4-1x1.apk
+          name: BTC-Margin-Widget-v5-1x1-Signed-APK
+          path: apk-output/BTC-Margin-Widget-v5-1x1.apk
