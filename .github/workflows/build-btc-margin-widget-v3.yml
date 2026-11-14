@@ -1,0 +1,79 @@
+name: Build BTC Margin Widget v3 APK
+
+on:
+  push:
+    branches:
+      - build-btc-margin-widget-v3-20261115
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 37
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-37" "build-tools;36.0.0"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.0'
+
+      - name: Rebuild source ZIP
+        run: |
+          cat tmp-btc-margin-widget-v3/source.part1 \
+              tmp-btc-margin-widget-v3/source.part2 \
+              tmp-btc-margin-widget-v3/source.part3 \
+              tmp-btc-margin-widget-v3/source.part4 \
+            | base64 --decode > /tmp/MarginBalanceWidget_v3_source.zip
+          mkdir -p extracted
+          unzip -q /tmp/MarginBalanceWidget_v3_source.zip -d extracted
+
+      - name: Build release APK
+        working-directory: extracted/MarginBalanceWidget
+        run: |
+          gradle :app:assembleRelease
+
+      - name: Restore signing key
+        run: |
+          mkdir -p signing-key
+          echo "${{ secrets.SIGNING_KEY_BASE64 }}" | base64 --decode > signing-key/pulseforge-release.jks
+
+      - name: Sign APK
+        env:
+          STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: |
+          UNSIGNED_APK=$(find extracted/MarginBalanceWidget/app/build/outputs/apk/release -type f -name "*.apk" | head -n 1)
+          test -n "$UNSIGNED_APK"
+          BUILD_TOOLS=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
+          test -n "$BUILD_TOOLS"
+          mkdir -p apk-output
+          "$BUILD_TOOLS/zipalign" -f -p 4 "$UNSIGNED_APK" apk-output/BTC-Margin-Widget-v3-aligned.apk
+          "$BUILD_TOOLS/apksigner" sign \
+            --ks signing-key/pulseforge-release.jks \
+            --ks-key-alias pulseforge \
+            --ks-pass env:STORE_PASSWORD \
+            --key-pass env:KEY_PASSWORD \
+            --out apk-output/BTC-Margin-Widget-v3.apk \
+            apk-output/BTC-Margin-Widget-v3-aligned.apk
+          "$BUILD_TOOLS/apksigner" verify --verbose apk-output/BTC-Margin-Widget-v3.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: BTC-Margin-Widget-v3-Signed-APK
+          path: apk-output/BTC-Margin-Widget-v3.apk
